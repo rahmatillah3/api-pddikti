@@ -1,4 +1,3 @@
-```php
 <?php
 
 // ======================================================
@@ -115,130 +114,54 @@ function ambilAPI($url)
     ];
 }
 
-
-
 // ======================================================
 // 1. API PERGURUAN TINGGI
 // ======================================================
 
-$url_pt =
-"https://pddikti.kemdiktisaintek.go.id/api/pt/detail/VvfhqKk2lEVgi9XyVdLnueMkOv6vlJUpDQIxANfgi4sXkBvhYZ3-ptzNyUjnPwriw-rwvg==";
+$url_pt = "https://pddikti.kemdiktisaintek.go.id/api/pt/detail/VvfhqKk2lEVgi9XyVdLnueMkOv6vlJUpDQIxANfgi4sXkBvhYZ3-ptzNyUjnPwriw-rwvg==";
 
 
+// Coba ambil data PT
 $result_pt = ambilAPI($url_pt);
 
 
-// ======================================================
-// CEK DATA PERGURUAN TINGGI
-// ======================================================
+// Jangan hentikan website jika API PT ditolak.
+// Data PT tidak diperlukan untuk menghitung jumlah prodi.
+$pt = [];
 
 if (
-    !$result_pt["success"]
+    $result_pt["success"]
+    &&
+    isset($result_pt["data"]["data"])
+    &&
+    is_array($result_pt["data"]["data"])
 ) {
 
-    die("
-
-        <div style='
-            font-family:Arial,sans-serif;
-            max-width:700px;
-            margin:60px auto;
-            padding:30px;
-            background:#fee2e2;
-            color:#991b1b;
-            border-radius:15px;
-            box-shadow:0 5px 20px rgba(0,0,0,.08);
-        '>
-
-            <h2 style='margin-bottom:15px;'>
-                Gagal Mengambil Data PDDIKTI
-            </h2>
-
-            <p>
-                <strong>Error:</strong>
-            </p>
-
-            <p style='margin-top:8px;'>
-                "
-                .
-                htmlspecialchars(
-                    $result_pt["error"]
-                )
-                .
-                "
-            </p>
-
-        </div>
-
-    ");
+    $pt = $result_pt["data"]["data"];
 
 }
 
 
-$data_pt =
-$result_pt["data"];
-
-
-// ======================================================
-// CEK STRUKTUR DATA PT
-// ======================================================
-
-if (
-    !is_array($data_pt)
-    ||
-    !isset($data_pt["data"])
-) {
-
-    die("
-
-        <div style='
-            font-family:Arial,sans-serif;
-            max-width:700px;
-            margin:60px auto;
-            padding:30px;
-            background:#fee2e2;
-            color:#991b1b;
-            border-radius:15px;
-        '>
-
-            <h2>
-                Data Perguruan Tinggi Tidak Sesuai
-            </h2>
-
-            <p style='margin-top:10px;'>
-                API PDDIKTI berhasil diakses,
-                tetapi struktur data tidak sesuai.
-            </p>
-
-        </div>
-
-    ");
-
-}
-
-
-$pt =
-$data_pt["data"];
+// Nama perguruan tinggi
+$nama_pt = $pt["nama_pt"]
+    ?? "Politeknik Negeri Lhokseumawe";
 
 
 // ======================================================
 // 2. API PROGRAM STUDI
 // ======================================================
 
-$url_prodi =
-"https://pddikti.kemdiktisaintek.go.id/api/pt/prodi/B7OPrCaLnSM1jPcSLp7xV7tkDT1uIOvMpNlCjwgA2bq_SvK93yHFHs1lZQmipdXooHANmg==/20251";
+$url_prodi = "https://pddikti.kemdiktisaintek.go.id/api/pt/prodi/B7OPrCaLnSM1jPcSLp7xV7tkDT1uIOvMpNlCjwgA2bq_SvK93yHFHs1lZQmipdXooHANmg==/20251";
 
 
-$result_prodi =
-ambilAPI($url_prodi);
+$result_prodi = ambilAPI($url_prodi);
 
 
 // ======================================================
-// CEK DATA PROGRAM STUDI
+// CEK API PROGRAM STUDI
 // ======================================================
 
-if (
-    !$result_prodi["success"]
-) {
+if (!$result_prodi["success"]) {
 
     die("
 
@@ -278,8 +201,7 @@ if (
 }
 
 
-$data_prodi =
-$result_prodi["data"];
+$data_prodi = $result_prodi["data"];
 
 
 // ======================================================
@@ -320,8 +242,7 @@ if (
 }
 
 
-$prodi =
-$data_prodi["data"];
+$prodi = $data_prodi["data"];
 
 
 // Pastikan data prodi berbentuk array
@@ -332,15 +253,11 @@ if (!is_array($prodi)) {
 
 }
 
-
-
 // ======================================================
-// 3. PERHITUNGAN
+// 3. PERHITUNGAN JUMLAH PRODI
 // ======================================================
 
-$total_prodi =
-count($prodi);
-
+$total_prodi = count($prodi);
 
 
 // ======================================================
@@ -349,28 +266,17 @@ count($prodi);
 
 $prodi_dipilih = null;
 
+if (isset($_GET["prodi"])) {
 
-if (
-    isset($_GET["prodi"])
-) {
+    $index = (int) $_GET["prodi"];
 
-    $index =
-    (int) $_GET["prodi"];
+    if (isset($prodi[$index])) {
 
-
-    if (
-        isset($prodi[$index])
-    ) {
-
-        $prodi_dipilih =
-        $prodi[$index];
+        $prodi_dipilih = $prodi[$index];
 
     }
 
 }
-
-
-
 // ======================================================
 // 5. DATA FILTER
 // ======================================================
