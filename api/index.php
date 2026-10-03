@@ -1,4 +1,4 @@
-
+```php
 <?php
 
 // ======================================================
@@ -6,70 +6,341 @@
 // POLITEKNIK NEGERI LHOKSEUMAWE
 // ======================================================
 
+// PHP 8.5 tidak lagi membutuhkan curl_close()
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+
+
+// ======================================================
+// FUNGSI MENGAMBIL DATA API
+// ======================================================
+
+function ambilAPI($url)
+{
+    $ch = curl_init();
+
+    curl_setopt_array($ch, [
+
+        CURLOPT_URL => $url,
+
+        CURLOPT_RETURNTRANSFER => true,
+
+        CURLOPT_FOLLOWLOCATION => true,
+
+        CURLOPT_SSL_VERIFYPEER => true,
+
+        CURLOPT_SSL_VERIFYHOST => 2,
+
+        CURLOPT_CONNECTTIMEOUT => 15,
+
+        CURLOPT_TIMEOUT => 30,
+
+        CURLOPT_HTTPHEADER => [
+            "Accept: application/json",
+            "User-Agent: Mozilla/5.0"
+        ]
+
+    ]);
+
+    $response = curl_exec($ch);
+
+
+    // ==================================================
+    // CEK ERROR CURL
+    // ==================================================
+
+    if ($response === false) {
+
+        return [
+            "success" => false,
+            "error" => "cURL Error: " . curl_error($ch)
+        ];
+
+    }
+
+
+    // ==================================================
+    // CEK HTTP STATUS
+    // ==================================================
+
+    $http_code = curl_getinfo(
+        $ch,
+        CURLINFO_HTTP_CODE
+    );
+
+
+    if ($http_code < 200 || $http_code >= 300) {
+
+        return [
+            "success" => false,
+            "error" => "HTTP Error: " . $http_code,
+            "response" => substr($response, 0, 500)
+        ];
+
+    }
+
+
+    // ==================================================
+    // DECODE JSON
+    // ==================================================
+
+    $data = json_decode(
+        $response,
+        true
+    );
+
+
+    if (
+        json_last_error()
+        !==
+        JSON_ERROR_NONE
+    ) {
+
+        return [
+            "success" => false,
+            "error" =>
+                "JSON Error: "
+                .
+                json_last_error_msg(),
+
+            "response" =>
+                substr($response, 0, 500)
+        ];
+
+    }
+
+
+    return [
+        "success" => true,
+        "data" => $data
+    ];
+}
+
+
 
 // ======================================================
 // 1. API PERGURUAN TINGGI
 // ======================================================
 
-$url_pt = "https://pddikti.kemdiktisaintek.go.id/api/pt/detail/VvfhqKk2lEVgi9XyVdLnueMkOv6vlJUpDQIxANfgi4sXkBvhYZ3-ptzNyUjnPwriw-rwvg==";
+$url_pt =
+"https://pddikti.kemdiktisaintek.go.id/api/pt/detail/VvfhqKk2lEVgi9XyVdLnueMkOv6vlJUpDQIxANfgi4sXkBvhYZ3-ptzNyUjnPwriw-rwvg==";
 
-$ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, $url_pt);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+$result_pt = ambilAPI($url_pt);
 
-$response_pt = curl_exec($ch);
 
-if (curl_errno($ch)) {
-    die("Gagal mengambil data perguruan tinggi: " . curl_error($ch));
+// ======================================================
+// CEK DATA PERGURUAN TINGGI
+// ======================================================
+
+if (
+    !$result_pt["success"]
+) {
+
+    die("
+
+        <div style='
+            font-family:Arial,sans-serif;
+            max-width:700px;
+            margin:60px auto;
+            padding:30px;
+            background:#fee2e2;
+            color:#991b1b;
+            border-radius:15px;
+            box-shadow:0 5px 20px rgba(0,0,0,.08);
+        '>
+
+            <h2 style='margin-bottom:15px;'>
+                Gagal Mengambil Data PDDIKTI
+            </h2>
+
+            <p>
+                <strong>Error:</strong>
+            </p>
+
+            <p style='margin-top:8px;'>
+                "
+                .
+                htmlspecialchars(
+                    $result_pt["error"]
+                )
+                .
+                "
+            </p>
+
+        </div>
+
+    ");
+
 }
 
-curl_close($ch);
 
-$data_pt = json_decode($response_pt, true);
+$data_pt =
+$result_pt["data"];
 
-if (!$data_pt || !isset($data_pt['data'])) {
-    die("Data perguruan tinggi tidak berhasil dibaca.");
+
+// ======================================================
+// CEK STRUKTUR DATA PT
+// ======================================================
+
+if (
+    !is_array($data_pt)
+    ||
+    !isset($data_pt["data"])
+) {
+
+    die("
+
+        <div style='
+            font-family:Arial,sans-serif;
+            max-width:700px;
+            margin:60px auto;
+            padding:30px;
+            background:#fee2e2;
+            color:#991b1b;
+            border-radius:15px;
+        '>
+
+            <h2>
+                Data Perguruan Tinggi Tidak Sesuai
+            </h2>
+
+            <p style='margin-top:10px;'>
+                API PDDIKTI berhasil diakses,
+                tetapi struktur data tidak sesuai.
+            </p>
+
+        </div>
+
+    ");
+
 }
 
-$pt = $data_pt['data'];
+
+$pt =
+$data_pt["data"];
 
 
 // ======================================================
 // 2. API PROGRAM STUDI
 // ======================================================
 
-$url_prodi = "https://pddikti.kemdiktisaintek.go.id/api/pt/prodi/B7OPrCaLnSM1jPcSLp7xV7tkDT1uIOvMpNlCjwgA2bq_SvK93yHFHs1lZQmipdXooHANmg==/20251";
+$url_prodi =
+"https://pddikti.kemdiktisaintek.go.id/api/pt/prodi/B7OPrCaLnSM1jPcSLp7xV7tkDT1uIOvMpNlCjwgA2bq_SvK93yHFHs1lZQmipdXooHANmg==/20251";
 
-$ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, $url_prodi);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+$result_prodi =
+ambilAPI($url_prodi);
 
-$response_prodi = curl_exec($ch);
 
-if (curl_errno($ch)) {
-    die("Gagal mengambil data program studi: " . curl_error($ch));
+// ======================================================
+// CEK DATA PROGRAM STUDI
+// ======================================================
+
+if (
+    !$result_prodi["success"]
+) {
+
+    die("
+
+        <div style='
+            font-family:Arial,sans-serif;
+            max-width:700px;
+            margin:60px auto;
+            padding:30px;
+            background:#fee2e2;
+            color:#991b1b;
+            border-radius:15px;
+            box-shadow:0 5px 20px rgba(0,0,0,.08);
+        '>
+
+            <h2 style='margin-bottom:15px;'>
+                Gagal Mengambil Data Program Studi
+            </h2>
+
+            <p>
+                <strong>Error:</strong>
+            </p>
+
+            <p style='margin-top:8px;'>
+                "
+                .
+                htmlspecialchars(
+                    $result_prodi["error"]
+                )
+                .
+                "
+            </p>
+
+        </div>
+
+    ");
+
 }
 
-curl_close($ch);
 
-$data_prodi = json_decode($response_prodi, true);
+$data_prodi =
+$result_prodi["data"];
 
-if (!$data_prodi || !isset($data_prodi['data'])) {
-    die("Data program studi tidak berhasil dibaca.");
+
+// ======================================================
+// CEK STRUKTUR DATA PRODI
+// ======================================================
+
+if (
+    !is_array($data_prodi)
+    ||
+    !isset($data_prodi["data"])
+) {
+
+    die("
+
+        <div style='
+            font-family:Arial,sans-serif;
+            max-width:700px;
+            margin:60px auto;
+            padding:30px;
+            background:#fee2e2;
+            color:#991b1b;
+            border-radius:15px;
+        '>
+
+            <h2>
+                Data Program Studi Tidak Sesuai
+            </h2>
+
+            <p style='margin-top:10px;'>
+                API PDDIKTI berhasil diakses,
+                tetapi data program studi tidak ditemukan.
+            </p>
+
+        </div>
+
+    ");
+
 }
 
-$prodi = $data_prodi['data'];
+
+$prodi =
+$data_prodi["data"];
+
+
+// Pastikan data prodi berbentuk array
+
+if (!is_array($prodi)) {
+
+    $prodi = [];
+
+}
+
 
 
 // ======================================================
 // 3. PERHITUNGAN
 // ======================================================
 
-$total_prodi = count($prodi);
+$total_prodi =
+count($prodi);
+
 
 
 // ======================================================
@@ -78,14 +349,26 @@ $total_prodi = count($prodi);
 
 $prodi_dipilih = null;
 
-if (isset($_GET['prodi'])) {
 
-    $index = (int) $_GET['prodi'];
+if (
+    isset($_GET["prodi"])
+) {
 
-    if (isset($prodi[$index])) {
-        $prodi_dipilih = $prodi[$index];
+    $index =
+    (int) $_GET["prodi"];
+
+
+    if (
+        isset($prodi[$index])
+    ) {
+
+        $prodi_dipilih =
+        $prodi[$index];
+
     }
+
 }
+
 
 
 // ======================================================
@@ -93,36 +376,73 @@ if (isset($_GET['prodi'])) {
 // ======================================================
 
 $jenjang_list = [];
+
 $akreditasi_list = [];
 
-foreach ($prodi as $p) {
 
-    if (isset($p['jenjang_prodi']) && $p['jenjang_prodi'] !== '') {
-        $jenjang_list[] = $p['jenjang_prodi'];
+foreach (
+    $prodi
+    as $p
+) {
+
+    if (
+        isset($p["jenjang_prodi"])
+        &&
+        $p["jenjang_prodi"] !== ""
+    ) {
+
+        $jenjang_list[] =
+        $p["jenjang_prodi"];
+
     }
 
-    if (isset($p['akreditasi']) && $p['akreditasi'] !== '') {
-        $akreditasi_list[] = $p['akreditasi'];
+
+    if (
+        isset($p["akreditasi"])
+        &&
+        $p["akreditasi"] !== ""
+    ) {
+
+        $akreditasi_list[] =
+        $p["akreditasi"];
+
     }
+
 }
 
-$jenjang_list = array_unique($jenjang_list);
-$akreditasi_list = array_unique($akreditasi_list);
+
+$jenjang_list =
+array_unique(
+    $jenjang_list
+);
+
+
+$akreditasi_list =
+array_unique(
+    $akreditasi_list
+);
+
 
 sort($jenjang_list);
+
 sort($akreditasi_list);
 
 ?>
 
+
+
 <!DOCTYPE html>
+
 <html lang="id">
 
 <head>
 
 <meta charset="UTF-8">
 
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
 <title>
     PDDIKTI - Politeknik Negeri Lhokseumawe
@@ -136,9 +456,13 @@ sort($akreditasi_list);
    ====================================================== */
 
 * {
+
     margin: 0;
+
     padding: 0;
+
     box-sizing: border-box;
+
 }
 
 
@@ -199,10 +523,6 @@ body {
 
 }
 
-
-/* ======================================================
-   LOGO PNL
-   ====================================================== */
 
 .logo-icon {
 
@@ -497,7 +817,8 @@ body {
 
     padding: 12px 14px;
 
-    border: 1px solid #cbd5e1;
+    border:
+        1px solid #cbd5e1;
 
     border-radius: 10px;
 
@@ -810,7 +1131,8 @@ body {
 
     .filter-container {
 
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:
+            1fr 1fr;
 
     }
 
@@ -866,7 +1188,8 @@ body {
 
     .main-card {
 
-        padding: 30px 20px;
+        padding:
+            30px 20px;
 
     }
 
@@ -880,21 +1203,24 @@ body {
 
     .filter-container {
 
-        grid-template-columns: 1fr;
+        grid-template-columns:
+            1fr;
 
     }
 
 
     .prodi-list {
 
-        grid-template-columns: 1fr;
+        grid-template-columns:
+            1fr;
 
     }
 
 
     .detail-grid {
 
-        grid-template-columns: 1fr;
+        grid-template-columns:
+            1fr;
 
     }
 
@@ -1019,9 +1345,9 @@ body {
 
 
 <?php if (
-    isset($_GET['lihat'])
+    isset($_GET["lihat"])
     &&
-    $_GET['lihat'] === 'prodi'
+    $_GET["lihat"] === "prodi"
 ): ?>
 
 
@@ -1060,8 +1386,6 @@ body {
         <div class="filter-container">
 
 
-            <!-- PENCARIAN -->
-
             <input
                 type="text"
                 id="searchProdi"
@@ -1069,8 +1393,6 @@ body {
                 placeholder="Cari nama program studi..."
             >
 
-
-            <!-- FILTER JENJANG -->
 
             <select
                 id="filterJenjang"
@@ -1090,7 +1412,9 @@ body {
                     <option
                         value="<?= htmlspecialchars($jenjang) ?>"
                     >
+
                         <?= htmlspecialchars($jenjang) ?>
+
                     </option>
 
                 <?php endforeach; ?>
@@ -1098,8 +1422,6 @@ body {
             </select>
 
 
-
-            <!-- FILTER AKREDITASI -->
 
             <select
                 id="filterAkreditasi"
@@ -1119,7 +1441,9 @@ body {
                     <option
                         value="<?= htmlspecialchars($akreditasi) ?>"
                     >
+
                         <?= htmlspecialchars($akreditasi) ?>
+
                     </option>
 
                 <?php endforeach; ?>
@@ -1128,14 +1452,14 @@ body {
 
 
 
-            <!-- RESET -->
-
             <button
                 type="button"
                 class="btn btn-reset"
                 onclick="resetFilter()"
             >
+
                 Reset
+
             </button>
 
 
@@ -1146,9 +1470,11 @@ body {
             class="result-info"
             id="resultInfo"
         >
+
             Menampilkan
             <?= $total_prodi ?>
             program studi
+
         </div>
 
     </div>
@@ -1169,24 +1495,29 @@ body {
 
     $no = 1;
 
+
     foreach (
         $prodi
         as $index => $p
     ):
 
-        $nama = isset($p['nama_prodi'])
-            ? trim($p['nama_prodi'])
-            : '-';
+
+        $nama =
+        isset($p["nama_prodi"])
+            ? trim($p["nama_prodi"])
+            : "-";
 
 
-        $jenjang = isset($p['jenjang_prodi'])
-            ? $p['jenjang_prodi']
-            : '-';
+        $jenjang =
+        isset($p["jenjang_prodi"])
+            ? $p["jenjang_prodi"]
+            : "-";
 
 
-        $akreditasi = isset($p['akreditasi'])
-            ? $p['akreditasi']
-            : '-';
+        $akreditasi =
+        isset($p["akreditasi"])
+            ? $p["akreditasi"]
+            : "-";
 
     ?>
 
@@ -1236,7 +1567,7 @@ body {
 
 
                     <?php if (
-                        $akreditasi !== '-'
+                        $akreditasi !== "-"
                     ): ?>
 
                         <div class="prodi-level">
@@ -1314,8 +1645,9 @@ body {
                 <h2>
 
                     <?= htmlspecialchars(
-                        $prodi_dipilih['nama_prodi']
-                        ?? 'Detail Program Studi'
+                        $prodi_dipilih["nama_prodi"]
+                        ??
+                        "Detail Program Studi"
                     ) ?>
 
                 </h2>
@@ -1366,9 +1698,12 @@ body {
              * Jika data berbentuk array
              */
 
-            if (is_array($value)) {
+            if (
+                is_array($value)
+            ) {
 
-                $value = json_encode(
+                $value =
+                json_encode(
                     $value,
                     JSON_UNESCAPED_UNICODE
                 );
@@ -1383,10 +1718,10 @@ body {
             if (
                 $value === null
                 ||
-                $value === ''
+                $value === ""
             ) {
 
-                $value = '-';
+                $value = "-";
 
             }
 
@@ -1396,13 +1731,16 @@ body {
              * menjadi lebih mudah dibaca
              */
 
-            $label = str_replace(
-                '_',
-                ' ',
+            $label =
+            str_replace(
+                "_",
+                " ",
                 $key
             );
 
-            $label = ucwords($label);
+
+            $label =
+            ucwords($label);
 
         ?>
 
@@ -1472,17 +1810,22 @@ body {
 const searchInput =
     document.getElementById("searchProdi");
 
+
 const filterJenjang =
     document.getElementById("filterJenjang");
+
 
 const filterAkreditasi =
     document.getElementById("filterAkreditasi");
 
+
 const prodiItems =
     document.querySelectorAll(".prodi-item");
 
+
 const resultInfo =
     document.getElementById("resultInfo");
+
 
 const emptyData =
     document.getElementById("emptyData");
@@ -1491,8 +1834,11 @@ const emptyData =
 
 function filterProdi() {
 
+
     if (!prodiItems.length) {
+
         return;
+
     }
 
 
@@ -1517,56 +1863,68 @@ function filterProdi() {
     let jumlah = 0;
 
 
-    prodiItems.forEach(function(item) {
+    prodiItems.forEach(
+        function(item)
+        {
 
 
-        const nama =
-            item.dataset.nama || "";
+            const nama =
+                item.dataset.nama
+                ||
+                "";
 
 
-        const itemJenjang =
-            item.dataset.jenjang || "";
+            const itemJenjang =
+                item.dataset.jenjang
+                ||
+                "";
 
 
-        const itemAkreditasi =
-            item.dataset.akreditasi || "";
+            const itemAkreditasi =
+                item.dataset.akreditasi
+                ||
+                "";
 
 
-        const cocokNama =
-            nama.includes(search);
+            const cocokNama =
+                nama.includes(search);
 
 
-        const cocokJenjang =
-            jenjang === ""
-            ||
-            itemJenjang === jenjang;
+            const cocokJenjang =
+                jenjang === ""
+                ||
+                itemJenjang === jenjang;
 
 
-        const cocokAkreditasi =
-            akreditasi === ""
-            ||
-            itemAkreditasi === akreditasi;
+            const cocokAkreditasi =
+                akreditasi === ""
+                ||
+                itemAkreditasi === akreditasi;
 
 
-        if (
-            cocokNama
-            &&
-            cocokJenjang
-            &&
-            cocokAkreditasi
-        ) {
+            if (
+                cocokNama
+                &&
+                cocokJenjang
+                &&
+                cocokAkreditasi
+            ) {
 
-            item.style.display = "flex";
+                item.style.display =
+                    "flex";
 
-            jumlah++;
+                jumlah++;
 
-        } else {
+            }
+            else {
 
-            item.style.display = "none";
+                item.style.display =
+                    "none";
+
+            }
 
         }
-
-    });
+    );
 
 
     if (resultInfo) {
@@ -1585,11 +1943,14 @@ function filterProdi() {
 
         if (jumlah === 0) {
 
-            emptyData.style.display = "block";
+            emptyData.style.display =
+                "block";
 
-        } else {
+        }
+        else {
 
-            emptyData.style.display = "none";
+            emptyData.style.display =
+                "none";
 
         }
 
@@ -1599,20 +1960,31 @@ function filterProdi() {
 
 
 
+// ======================================================
+// RESET FILTER
+// ======================================================
+
 function resetFilter() {
 
+
     if (searchInput) {
+
         searchInput.value = "";
+
     }
 
 
     if (filterJenjang) {
+
         filterJenjang.value = "";
+
     }
 
 
     if (filterAkreditasi) {
+
         filterAkreditasi.value = "";
+
     }
 
 
@@ -1621,6 +1993,10 @@ function resetFilter() {
 }
 
 
+
+// ======================================================
+// EVENT SEARCH
+// ======================================================
 
 if (searchInput) {
 
@@ -1632,6 +2008,11 @@ if (searchInput) {
 }
 
 
+
+// ======================================================
+// EVENT FILTER JENJANG
+// ======================================================
+
 if (filterJenjang) {
 
     filterJenjang.addEventListener(
@@ -1641,6 +2022,11 @@ if (filterJenjang) {
 
 }
 
+
+
+// ======================================================
+// EVENT FILTER AKREDITASI
+// ======================================================
 
 if (filterAkreditasi) {
 
