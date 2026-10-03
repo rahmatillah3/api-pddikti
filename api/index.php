@@ -18,102 +18,63 @@ function ambilAPI($url)
     $ch = curl_init();
 
     curl_setopt_array($ch, [
-
         CURLOPT_URL => $url,
-
         CURLOPT_RETURNTRANSFER => true,
-
         CURLOPT_FOLLOWLOCATION => true,
 
         CURLOPT_SSL_VERIFYPEER => true,
-
         CURLOPT_SSL_VERIFYHOST => 2,
 
         CURLOPT_CONNECTTIMEOUT => 15,
-
         CURLOPT_TIMEOUT => 30,
 
         CURLOPT_HTTPHEADER => [
-            "Accept: application/json",
-            "User-Agent: Mozilla/5.0"
+            "Accept: application/json, text/plain, */*",
+            "Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer: https://pddikti.kemdiktisaintek.go.id/",
+            "Origin: https://pddikti.kemdiktisaintek.go.id",
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
         ]
-
     ]);
 
     $response = curl_exec($ch);
 
-
-    // ==================================================
-    // CEK ERROR CURL
-    // ==================================================
-
+    // Cek error cURL
     if ($response === false) {
-
         return [
             "success" => false,
             "error" => "cURL Error: " . curl_error($ch)
         ];
-
     }
 
+    // Ambil HTTP status
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    // ==================================================
-    // CEK HTTP STATUS
-    // ==================================================
-
-    $http_code = curl_getinfo(
-        $ch,
-        CURLINFO_HTTP_CODE
-    );
-
-
+    // Cek HTTP error
     if ($http_code < 200 || $http_code >= 300) {
-
         return [
             "success" => false,
             "error" => "HTTP Error: " . $http_code,
             "response" => substr($response, 0, 500)
         ];
-
     }
 
+    // Decode JSON
+    $data = json_decode($response, true);
 
-    // ==================================================
-    // DECODE JSON
-    // ==================================================
-
-    $data = json_decode(
-        $response,
-        true
-    );
-
-
-    if (
-        json_last_error()
-        !==
-        JSON_ERROR_NONE
-    ) {
-
+    if (json_last_error() !== JSON_ERROR_NONE) {
         return [
             "success" => false,
-            "error" =>
-                "JSON Error: "
-                .
-                json_last_error_msg(),
-
-            "response" =>
-                substr($response, 0, 500)
+            "error" => "JSON Error: " . json_last_error_msg(),
+            "response" => substr($response, 0, 500)
         ];
-
     }
-
 
     return [
         "success" => true,
         "data" => $data
     ];
 }
-
 // ======================================================
 // 1. API PERGURUAN TINGGI
 // ======================================================
